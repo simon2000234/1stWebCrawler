@@ -15,6 +15,7 @@ namespace Assingment2AA
             Console.WriteLine("Number of Searches:");
             int maxSeaches = int.Parse(Console.ReadLine());
             Console.WriteLine("Max Depth:");
+            
             int maxDepth = int.Parse(Console.ReadLine());
             WebCrawler wc = new WebCrawler(maxSeaches, urlStr, maxDepth);
             wc.Crawl();

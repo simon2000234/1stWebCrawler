@@ -17,6 +17,7 @@ namespace Assingment2AA
         private Dictionary<string, bool> myWebOfLinks;
         private string urlStr;
         private int maxDepth;
+        private Dictionary<string, string[]> _permissions;
 
         public WebCrawler(int maxSeaches, string urlStr, int maxDepth)
         {
@@ -27,8 +28,9 @@ namespace Assingment2AA
             allLinks = new List<string>();
             frontier = new Queue<UriDepth>();
             myWebOfLinks = new Dictionary<string, bool>();
+            _permissions = new Dictionary<string, string[]>();
         }
-
+        
         public void Crawl()
         {
             UriBuilder ub = new UriBuilder(urlStr);
@@ -36,11 +38,14 @@ namespace Assingment2AA
             while (frontier.Any())
             {
                 UriDepth localUriDepth = frontier.Dequeue();
-                WebClient wc = new WebClient();
+                if (!CheckIfNewHostUrl(localUriDepth.Uri.Host))
+                { 
+                    ReadRobotsTxt(localUriDepth.Uri.Host);
+                }
                 try
                 {
+                    WebClient wc = new WebClient();
                     string webPage = wc.DownloadString(localUriDepth.Uri.ToString());
-
 
                     var urls = urlTagPattern.Matches(webPage);
                     foreach (Match url in urls)
@@ -91,6 +96,58 @@ namespace Assingment2AA
                 }
 
             }
+
+            foreach (var dab in _permissions["www.google.dk"])
+            {
+                Console.WriteLine(dab);
+            }
+        }
+
+        private bool CheckIfNewHostUrl(string hostURL)
+        {
+            foreach (var url in _permissions.Keys)
+            {
+                if (url.Equals(hostURL))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private bool CheckPermission(Uri uri)
+        {
+            foreach (var noNo in _permissions[uri.Host])
+            {
+                int start = uri.AbsoluteUri.IndexOf("/".ToCharArray()[0]) + 2;
+                string notAllowed = ( uri.Host + noNo.Substring(10));
+                string current = uri.AbsoluteUri.Substring(start);
+                if (current.Equals(notAllowed))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+        private void ReadRobotsTxt(string hostUrl)
+        {
+            WebClient wc = new WebClient();
+            string wholeFile = wc.DownloadString("http://" + hostUrl + "/robots.txt");
+            string[] array = wholeFile.Split("\n");
+            List<string> arrayInProgress = new List<string>();
+            for (int i = 0; i < array.Length; i++)
+            {
+                if (array[i].Length >= 10)
+                {
+                    if (array[i].Substring(0, 9).Equals("Disallow:"))
+                    {
+                        arrayInProgress.Add(array[i]);
+                    }
+                }
+            }
+            _permissions[hostUrl] = arrayInProgress.ToArray();
+
         }
     }
 }
