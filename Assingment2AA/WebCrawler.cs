@@ -46,7 +46,6 @@ namespace Assingment2AA
                 {
                     WebClient wc = new WebClient();
                     string webPage = wc.DownloadString(localUriDepth.Uri.ToString());
-
                     var urls = urlTagPattern.Matches(webPage);
                     foreach (Match url in urls)
                     {
@@ -68,15 +67,31 @@ namespace Assingment2AA
                         {
                             try
                             {
+                                
                                 Uri.TryCreate(localUriDepth.Uri, newUrl, out var uri);
-                                myWebOfLinks.Add(newUrl, true);
-                                frontier.Enqueue(new UriDepth(uri, localUriDepth.Depth + 1));
+                                if (!CheckIfNewHostUrl(uri.Host))
+                                {
+                                    ReadRobotsTxt(uri.Host);
+                                }
+
+                                if (CheckPermission(uri))
+                                {
+                                    myWebOfLinks.Add(newUrl, true);
+                                    frontier.Enqueue(new UriDepth(uri, localUriDepth.Depth + 1));
+                                }
+                                else
+                                {
+                                    myWebOfLinks.Add(newUrl, false);
+                                    Console.WriteLine("Fuck it not allowed: " + newUrl);
+                                }
+                                
+                                
                             }
                             catch (Exception e)
                             {
 
                                 myWebOfLinks.Add(newUrl, false);
-                                Console.WriteLine("Fuck it shit: " + newUrl);
+                                Console.WriteLine("Fuck it broken: " + newUrl);
                             }
                         }
                     }
@@ -96,10 +111,22 @@ namespace Assingment2AA
                 }
 
             }
+        }
 
-            foreach (var dab in _permissions["www.google.dk"])
+        public void DoesDisallowWork()
+        {
+            //fuck it not work this 
+            foreach (var url in myWebOfLinks.Keys)
             {
-                Console.WriteLine(dab);
+                if (myWebOfLinks[url])
+                {
+                    UriBuilder ub = new UriBuilder(url);
+                    if (!CheckPermission(ub.Uri))
+                    {
+                        Console.WriteLine(url + " is not allowed but visited anyway");
+                    }
+                }
+                
             }
         }
 
@@ -127,26 +154,34 @@ namespace Assingment2AA
                     return false;
                 }
             }
-
             return true;
         }
         private void ReadRobotsTxt(string hostUrl)
         {
-            WebClient wc = new WebClient();
-            string wholeFile = wc.DownloadString("http://" + hostUrl + "/robots.txt");
-            string[] array = wholeFile.Split("\n");
-            List<string> arrayInProgress = new List<string>();
-            for (int i = 0; i < array.Length; i++)
+            try
             {
-                if (array[i].Length >= 10)
+                WebClient wc = new WebClient();
+                string wholeFile = wc.DownloadString("http://" + hostUrl + "/robots.txt");
+                string[] array = wholeFile.Split("\n");
+                List<string> arrayInProgress = new List<string>();
+                for (int i = 0; i < array.Length; i++)
                 {
-                    if (array[i].Substring(0, 9).Equals("Disallow:"))
+                    if (array[i].Length >= 10)
                     {
-                        arrayInProgress.Add(array[i]);
+                        if (array[i].Substring(0, 9).Equals("Disallow:"))
+                        {
+                            arrayInProgress.Add(array[i]);
+                        }
                     }
                 }
+                _permissions[hostUrl] = arrayInProgress.ToArray();
             }
-            _permissions[hostUrl] = arrayInProgress.ToArray();
+            catch (Exception e)
+            {
+                //The Website has no robots.txt
+                _permissions[hostUrl] = new string[0];
+            }
+            
 
         }
     }

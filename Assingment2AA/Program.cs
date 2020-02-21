@@ -18,7 +18,7 @@ namespace Assingment2AA
             
             int maxDepth = int.Parse(Console.ReadLine());
             WebCrawler wc = new WebCrawler(maxSeaches, urlStr, maxDepth);
-            wc.Crawl();
+             wc.Crawl();
         }
     }
 }
